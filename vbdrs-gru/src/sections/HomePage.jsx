@@ -17,8 +17,24 @@ export default function HomePage() {
   const handleStartRecording = () => setRecord(true);
   const handleStopRecording = () => setRecord(false);
 
-  const handleOnStop = (recordedBlob) => {
+  const handleOnStop = async (recordedBlob) => {
+    console.log("Recorded blob:", recordedBlob);
     setAudioFile(recordedBlob.blob);
+
+    const formData = new FormData();
+    formData.append("audio", recordedBlob.blob, "audio.webm");
+
+    try {
+      const response = await fetch("http://localhost:5000/predict", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await response.json();
+      setDetectedEmotion(data.emotion || "No emotion detected");
+    } catch (error) {
+      console.error("Error:", error);
+      setDetectedEmotion("Error predicting emotion");
+    }
   };
 
   const handleFileUpload = (event) => {
