@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { ReactMic } from "react-mic";
-import { Mic, Upload, ShieldAlert, ChevronDown } from "lucide-react";
+import {
+  Mic,
+  Upload,
+  ShieldAlert,
+  ChevronDown,
+  ChevronLeft,
+} from "lucide-react";
 
 export default function HomePage() {
   const [showRecorder, setShowRecorder] = useState(false);
@@ -38,13 +44,16 @@ export default function HomePage() {
           VOICE-BASED DANGER RECOGNITION SYSTEM
         </h1>
         <p className="italic text-xs md:text-sm mt-2 px-2 text-gray-300 leading-relaxed">
-          Voice-Based Danger Recognition System is a Web System created for the study{" "}
+          Voice-Based Danger Recognition System is a Web System created for the
+          study{" "}
           <q>
-            An Enhancement of Gated Recurrent Unit (GRU) for Speech Emotion Recognition in the
-            Implementation of Voice-Based Danger Recognition System
+            An Enhancement of Gated Recurrent Unit (GRU) for Speech Emotion
+            Recognition in the Implementation of Voice-Based Danger Recognition
+            System
           </q>
-          . This detects 6 classified emotions namely: Sad, Happy, Anger, Disgust, Fear, and
-          Neutral and correlates the 'Fear' emotion to the state of danger.
+          . This detects 6 classified emotions namely: Sad, Happy, Anger,
+          Disgust, Fear, and Neutral and correlates the 'Fear' emotion to the
+          state of danger.
         </p>
 
         {!showRecorder ? (
@@ -54,8 +63,12 @@ export default function HomePage() {
               onClick={() => setShowRecorder(true)}
             >
               <Mic className="w-10 h-10 text-gray-900" />
-              <span className="mt-2 font-medium text-gray-900">Record an Audio</span>
-              <span className="text-sm italic mt-1 text-gray-500">Max. of 4 seconds</span>
+              <span className="mt-2 font-medium text-gray-900">
+                Record an Audio
+              </span>
+              <span className="text-sm italic mt-1 text-gray-500">
+                Max. of 4 seconds
+              </span>
             </button>
 
             <label className="w-60 h-40 bg-gray-800 text-white flex flex-col items-center justify-center rounded-lg shadow hover:bg-gray-700 transition cursor-pointer">
@@ -67,22 +80,43 @@ export default function HomePage() {
               />
               <Upload className="w-10 h-10" />
               <span className="mt-2 font-medium">Upload a File</span>
-              <span className="text-sm italic mt-1 text-gray-400">Max. of 5 MB</span>
+              <span className="text-sm italic mt-1 text-gray-400">
+                Max. of 5 MB
+              </span>
             </label>
           </div>
         ) : (
           <div className="mt-10 w-full flex flex-col items-center">
             <div className="w-full max-w-2xl h-40 bg-gray-800 rounded-lg mb-4 flex items-center justify-center">
-              <span className="text-gray-400 italic">[ Spectrogram Placeholder ]</span>
+              <span className="text-gray-400 italic">
+                [ Spectrogram Placeholder ]
+              </span>
             </div>
 
-            <button
-              className="bg-gray-700 p-4 rounded-full text-white hover:bg-gray-600 transition"
-              onClick={record ? handleStopRecording : handleStartRecording}
-            >
-              <Mic className="w-6 h-6 text-gray-900" />
-            </button>
-            <span className="mt-2 text-sm italic text-gray-400">Max. of 4 seconds</span>
+            <div className="w-full flex items-center justify-between mb-4">
+              <button
+                className="bg-gray-700 p-4 rounded-full text-white hover:bg-gray-600 transition ml-4"
+                onClick={() => setShowRecorder(false)}
+                title="Back"
+              >
+                <ChevronLeft className="w-6 h-6 text-gray-700" />
+              </button>
+              <div className="flex-1 flex justify-center">
+                <button
+                  className="bg-gray-700 p-4 rounded-full text-white hover:bg-gray-600 transition"
+                  onClick={record ? handleStopRecording : handleStartRecording}
+                  title={record ? "Stop Recording" : "Start Recording"}
+                >
+                  <Mic className="w-6 h-6 text-gray-900" />
+                </button>
+              </div>
+              <div style={{ width: "56px" }} />{" "}
+              {/* Spacer to balance the layout */}
+            </div>
+
+            <span className="mt-2 text-sm italic text-gray-400">
+              Max. of 4 seconds
+            </span>
 
             <ReactMic
               record={record}
