@@ -87,7 +87,7 @@ export default function HomePage() {
     formData.append("audio", recordedBlob.blob, "recording.webm");
 
     try {
-      const response = await fetch("http://localhost:8000/predict", {
+      const response = await fetch("https://vbdrs-gru-backend-production.up.railway.app/", {
         method: "POST",
         body: formData,
       });
@@ -142,7 +142,7 @@ export default function HomePage() {
       const formData = new FormData();
       formData.append("audio", wavBlob, file.name);
 
-      const response = await fetch("http://localhost:8000/predict", {
+      const response = await fetch("https://vbdrs-gru-backend-production.up.railway.app/", {
         method: "POST",
         body: formData,
       });
