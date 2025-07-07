@@ -8,25 +8,154 @@ import {
   ChevronLeft,
 } from "lucide-react";
 
+function bufferToWavBlob(buffer) {
+  const numOfChan = buffer.numberOfChannels;
+  const length = buffer.length * numOfChan * 2 + 44;
+  const bufferArray = new ArrayBuffer(length);
+  const view = new DataView(bufferArray);
+  let offset = 0;
+
+  function writeString(s) {
+    for (let i = 0; i < s.length; i++) {
+      view.setUint8(offset++, s.charCodeAt(i));
+    }
+  }
+
+  function writeUint16(data) {
+    view.setUint16(offset, data, true);
+    offset += 2;
+  }
+
+  function writeUint32(data) {
+    view.setUint32(offset, data, true);
+    offset += 4;
+  }
+
+  writeString("RIFF");
+  writeUint32(length - 8);
+  writeString("WAVE");
+  writeString("fmt ");
+  writeUint32(16);
+  writeUint16(1);
+  writeUint16(numOfChan);
+  writeUint32(buffer.sampleRate);
+  writeUint32(buffer.sampleRate * numOfChan * 2);
+  writeUint16(numOfChan * 2);
+  writeUint16(16);
+  writeString("data");
+  writeUint32(buffer.length * numOfChan * 2);
+
+  const interleaved = new Int16Array(buffer.length * numOfChan);
+  for (let i = 0; i < buffer.length; i++) {
+    for (let ch = 0; ch < numOfChan; ch++) {
+      let sample = buffer.getChannelData(ch)[i];
+      sample = Math.max(-1, Math.min(1, sample));
+      interleaved[i * numOfChan + ch] =
+        sample < 0 ? sample * 0x8000 : sample * 0x7fff;
+    }
+  }
+
+  for (let i = 0; i < interleaved.length; i++, offset += 2) {
+    view.setInt16(offset, interleaved[i], true);
+  }
+
+  return new Blob([view], { type: "audio/wav" });
+}
+
 export default function HomePage() {
   const [showRecorder, setShowRecorder] = useState(false);
   const [record, setRecord] = useState(false);
   const [audioFile, setAudioFile] = useState(null);
   const [detectedEmotion, setDetectedEmotion] = useState("");
 
-  const handleStartRecording = () => setRecord(true);
-  const handleStopRecording = () => setRecord(false);
+  const handleStartRecording = () => {
+    setRecord(true);
 
-  const handleOnStop = (recordedBlob) => {
-    setAudioFile(recordedBlob.blob);
+    // Automatically stop after 4 seconds (4000ms)
+    setTimeout(() => {
+      setRecord(false);
+    }, 4000);
   };
 
-  const handleFileUpload = (event) => {
+  const handleStopRecording = () => setRecord(false);
+
+  const handleOnStop = async (recordedBlob) => {
+    setAudioFile(recordedBlob.blob);
+
+    const formData = new FormData();
+    formData.append("audio", recordedBlob.blob, "recording.webm");
+
+    try {
+      const response = await fetch("http://localhost:8000/predict", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Prediction failed");
+
+      const data = await response.json();
+      setDetectedEmotion(data.emotion);
+
+      // if (data.emotion.toLowerCase() === "fear") {
+      //   alert("⚠️ Danger Detected! Emotion: Fear");
+      // }
+    } catch (error) {
+      console.error("Error predicting emotion:", error);
+      alert("Error predicting emotion. Try again.");
+    }
+  };
+
+  const handleFileUpload = async (event) => {
     const file = event.target.files[0];
-    if (file && file.size <= 5 * 1024 * 1024) {
-      setAudioFile(file);
-    } else {
-      alert("File must be less than 5MB.");
+
+    if (!file || file.size > 5 * 1024 * 1024) {
+      alert("File must be a WAV and less than 5MB.");
+      return;
+    }
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+
+      const audioContext = new (window.AudioContext ||
+        window.webkitAudioContext)();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+      // Get first 4 seconds
+      const duration = 4; // seconds
+      const trimmedBuffer = audioContext.createBuffer(
+        audioBuffer.numberOfChannels,
+        Math.min(audioBuffer.sampleRate * duration, audioBuffer.length),
+        audioBuffer.sampleRate
+      );
+
+      for (let i = 0; i < audioBuffer.numberOfChannels; i++) {
+        trimmedBuffer
+          .getChannelData(i)
+          .set(audioBuffer.getChannelData(i).slice(0, trimmedBuffer.length));
+      }
+
+      // Encode back to WAV
+      const wavBlob = bufferToWavBlob(trimmedBuffer);
+
+      const formData = new FormData();
+      formData.append("audio", wavBlob, "trimmed.wav");
+
+      const response = await fetch("http://localhost:8000/predict", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Prediction failed");
+
+      const data = await response.json();
+      setDetectedEmotion(data.emotion);
+
+      // if (data.emotion.toLowerCase() === "fear") {
+      //   alert("⚠️ Danger Detected! Emotion: Fear");
+      // }
+    } catch (error) {
+      console.error("Error handling uploaded audio:", error);
+      alert("Error processing audio file. Try another WAV file.");
     }
   };
 
@@ -88,9 +217,15 @@ export default function HomePage() {
         ) : (
           <div className="mt-10 w-full flex flex-col items-center">
             <div className="w-full max-w-2xl h-40 bg-gray-800 rounded-lg mb-4 flex items-center justify-center">
-              <span className="text-gray-400 italic">
-                [ Spectrogram Placeholder ]
-              </span>
+              <ReactMic
+                record={record}
+                onStop={handleOnStop}
+                mimeType="audio/webm"
+                strokeColor="#ffffff" // Tailwind's dark blue-800
+                backgroundColor="#1f2937" // gray-900 for contrast
+                visualSetting="sinewave"
+                className="w-full h-full"
+              />
             </div>
 
             <div className="w-full flex items-center justify-between mb-4">
@@ -117,23 +252,31 @@ export default function HomePage() {
             <span className="mt-2 text-sm italic text-gray-400">
               Max. of 4 seconds
             </span>
-
-            <ReactMic
-              record={record}
-              className="hidden"
-              onStop={handleOnStop}
-              mimeType="audio/webm"
-              strokeColor="#ffffff"
-              backgroundColor="#1f2937"
-            />
           </div>
         )}
 
         <div className="mt-10 bg-gray-800 rounded-lg p-6 text-center w-full max-w-3xl mx-auto">
           <p className="italic text-gray-300">Detected Emotion:</p>
-          <p className="text-2xl font-semibold mt-2 text-white">
-            Result: {detectedEmotion || ""}
+          <p className="text-xl font-semibold mt-1 text-white">
+            {detectedEmotion ? detectedEmotion.toUpperCase() : "—"}
           </p>
+
+          <p className="mt-4 italic text-gray-300">Result:</p>
+          {detectedEmotion ? (
+            <p
+              className={`text-2xl font-bold mt-1 ${
+                detectedEmotion.toLowerCase() === "fear"
+                  ? "text-red-500"
+                  : "text-green-400"
+              }`}
+            >
+              {detectedEmotion.toLowerCase() === "fear"
+                ? "Danger Detected!"
+                : "No Danger Detected."}
+            </p>
+          ) : (
+            <p className="text-2xl font-semibold mt-1 text-gray-400">—</p>
+          )}
         </div>
 
         <p className="mt-10 italic text-lg text-gray-300">Prediction Table</p>
