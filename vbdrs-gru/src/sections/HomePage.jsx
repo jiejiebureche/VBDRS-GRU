@@ -96,7 +96,7 @@ export default function HomePage() {
 
       const data = await response.json();
       setDetectedEmotion(data.emotion);
-      setPredictionTable(data.prediction_table || []);
+      setPredictionTable((prev) => [...(data.prediction_table || []), ...prev]);
 
       // if (data.emotion.toLowerCase() === "fear") {
       //   alert("⚠️ Danger Detected! Emotion: Fear");
@@ -151,7 +151,7 @@ export default function HomePage() {
 
       const data = await response.json();
       setDetectedEmotion(data.emotion);
-      setPredictionTable(data.prediction_table || []);
+      setPredictionTable((prev) => [...(data.prediction_table || []), ...prev]);
 
       // if (data.emotion.toLowerCase() === "fear") {
       //   alert("⚠️ Danger Detected! Emotion: Fear");
@@ -319,6 +319,16 @@ export default function HomePage() {
           <p className="text-gray-500 mt-2 text-sm italic">
             No predictions yet.
           </p>
+        )}
+        {predictionTable.length > 0 && (
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={() => setPredictionTable([])}
+              className="text-sm text-gray-900 hover:underline"
+            >
+              Clear Prediction Log
+            </button>
+          </div>
         )}
       </main>
     </div>
