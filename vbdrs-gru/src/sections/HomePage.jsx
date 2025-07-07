@@ -140,7 +140,7 @@ export default function HomePage() {
       const wavBlob = bufferToWavBlob(trimmedBuffer);
 
       const formData = new FormData();
-      formData.append("audio", wavBlob, "trimmed.wav");
+      formData.append("audio", wavBlob, file.name);
 
       const response = await fetch("http://localhost:8000/predict", {
         method: "POST",
