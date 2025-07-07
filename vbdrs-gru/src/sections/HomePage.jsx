@@ -67,6 +67,7 @@ export default function HomePage() {
   const [record, setRecord] = useState(false);
   const [audioFile, setAudioFile] = useState(null);
   const [detectedEmotion, setDetectedEmotion] = useState("");
+  const [predictionTable, setPredictionTable] = useState([]);
 
   const handleStartRecording = () => {
     setRecord(true);
@@ -95,6 +96,7 @@ export default function HomePage() {
 
       const data = await response.json();
       setDetectedEmotion(data.emotion);
+      setPredictionTable((prev) => [...(data.prediction_table || []), ...prev]);
 
       // if (data.emotion.toLowerCase() === "fear") {
       //   alert("⚠️ Danger Detected! Emotion: Fear");
@@ -138,7 +140,7 @@ export default function HomePage() {
       const wavBlob = bufferToWavBlob(trimmedBuffer);
 
       const formData = new FormData();
-      formData.append("audio", wavBlob, "trimmed.wav");
+      formData.append("audio", wavBlob, file.name);
 
       const response = await fetch("http://localhost:8000/predict", {
         method: "POST",
@@ -149,6 +151,7 @@ export default function HomePage() {
 
       const data = await response.json();
       setDetectedEmotion(data.emotion);
+      setPredictionTable((prev) => [...(data.prediction_table || []), ...prev]);
 
       // if (data.emotion.toLowerCase() === "fear") {
       //   alert("⚠️ Danger Detected! Emotion: Fear");
@@ -279,10 +282,54 @@ export default function HomePage() {
           )}
         </div>
 
-        <p className="mt-10 italic text-lg text-gray-300">Prediction Table</p>
-        <div className="mt-2 text-white animate-bounce">
-          <ChevronDown className="w-8 h-8 mx-auto" />
-        </div>
+        {predictionTable.length > 0 ? (
+          <div className="overflow-x-auto mt-4">
+            <table className="w-full table-auto text-sm text-left text-white border border-gray-600">
+              <thead className="bg-gray-700">
+                <tr>
+                  <th className="px-4 py-2 border border-gray-600">
+                    True Emotion
+                  </th>
+                  <th className="px-4 py-2 border border-gray-600">
+                    Predicted Emotion
+                  </th>
+                  <th className="px-4 py-2 border border-gray-600">
+                    Predicted Probability
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {predictionTable.map((row, index) => (
+                  <tr key={index} className="bg-gray-800 hover:bg-gray-700">
+                    <td className="px-4 py-2 border border-gray-600">
+                      {row["True Emotion"]}
+                    </td>
+                    <td className="px-4 py-2 border border-gray-600">
+                      {row["Predicted Emotion"]}
+                    </td>
+                    <td className="px-4 py-2 border border-gray-600">
+                      {(row["Predicted Probability"] * 100).toFixed(2)}%
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-gray-500 mt-2 text-sm italic">
+            No predictions yet.
+          </p>
+        )}
+        {predictionTable.length > 0 && (
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={() => setPredictionTable([])}
+              className="text-sm text-gray-900 hover:underline"
+            >
+              Clear Prediction Log
+            </button>
+          </div>
+        )}
       </main>
     </div>
   );
