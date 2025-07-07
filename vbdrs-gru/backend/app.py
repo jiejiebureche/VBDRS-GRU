@@ -28,17 +28,27 @@ def predict():
         if features is None:
             return jsonify({'error': 'Feature extraction failed'}), 400
 
-        # Ensure input shape is (1, 40, 1)
-        features = np.expand_dims(features, axis=0)  # (1, 40, 1)
+        features = np.expand_dims(features, axis=0)  # shape: (1, 40, 1)
 
         prediction = model.predict(features)
-        predicted_label = emotion_labels[np.argmax(prediction)]
+        predicted_index = np.argmax(prediction)
+        predicted_label = emotion_labels[predicted_index]
+        predicted_prob = float(np.max(prediction))  # probability of top prediction
 
-        return jsonify({'emotion': predicted_label})
+        prediction_table = [{
+            "True Emotion": "N/A",
+            "Predicted Emotion": predicted_label,
+            "Predicted Probability": predicted_prob
+        }]
+
+        return jsonify({
+            'emotion': predicted_label,
+            'prediction_table': prediction_table
+        })
+
     except Exception as e:
         print("Prediction error:", e)
         return jsonify({'error': 'Failed to process audio'}), 500
-
 
 if __name__ == '__main__':
     app.run(debug=True, port=8000)
